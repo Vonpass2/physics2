@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebGL Arcade Shooter</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        #ui-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            min-width: 200px;
+        }
+        #ui-container h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        #ui-container p {
+            margin: 0;
+            font-size: 18px;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <h1>Score: <span id="scoreValue">0</span></h1>
+        <button id="resetBtn">New Game</button>
+    </div>
+    <div id="instructions">Click to Shoot</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import * as CANNON from 'cannon-es';
+
+        // ## 1. CORE SETUP ##
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111111);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
+        world.broadphase = new CANNON.SAPBroadphase(world);
+        world.allowSleep = true;
+
+        // ## 2. SOUND EFFECTS ##
+        // Sounds are encoded in Base64 to make this a single, self-contained file.
+        const sounds = {
+            shoot: new Audio("data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAAD//v/6/Ur+yfOh8L/mh9mH4Yf6hpiGqIa3h/yHlIeghqyGuYbohvuHwIdohdiG4IfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54eghZyGgYbmh9mH/odAhfSH3IfUh/yH+odEhQ2HcIfVh/2H+YeUhqyGq4fWh/iH+4eYh7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4eghZyGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H/YeUhqyGq4fWh/iH/4ech7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4eghZyGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YfghZiGgYcAh2CH3IfUh/yH/YfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54eAhQyFcIXJh+aH84fWh+KH7Ifsh+KH4Yfwh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghZyGgYcAh2CH3IfUh/yH/YeUhqyGq4fWh/iH/4ech7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4fghZiGgYcAh2CH3IfUh/yH/YfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54fMh9aH8Ifch+6H9YeAhQyFcIXJh+aH/If0h/KH4Ifyh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghZyGgYcAh2CH3IfUh/yH/YeUhqyGq4fWh/iH/4ech7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4fghZiGgYcAh2CH3IfUh/yH/YfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54fMh9aH8Ifch+6H9YeAhQyFcIXJh+aH/If0h/KH4Ifyh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghZyGgYcAh2CH3IfUh/yH/YeUhqyGq4fWh/iH/4eYh7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4fAhAmE3IbHh9yH1Yfth/yHlIaghqyGuYbwh/aH54fMh9aH8Ifch+6H9YeAhQyFcIXJh+aH/If0h/KH4Ifyh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH
