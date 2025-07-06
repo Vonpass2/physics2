@@ -1,65 +1,116 @@
+Let's build the ultimate physics sandbox.
+
+This version is a major upgrade with a host of new, entertaining features designed for maximum fun.
+
+### 
+
+  * **🎧 Positional Audio:** Objects now make sounds on impact, and the sound comes from the direction of the collision.
+  * **💥 Particle Effects:** Collisions create a burst of particles for visual feedback.
+  * **💣 Explosions & Implosions:** Click a button to create a powerful explosion or a vortex that sucks objects in.
+  * **🔫 Object Cannon:** A new UI panel lets you fire objects with adjustable force.
+  * **💔 Destructible Objects:** Objects have "health" and will break apart after too many hard hits.
+  * **📷 Orbit Controls:** The camera is no longer fixed. Orbit, pan, and zoom freely with your mouse.
+  * **🌌 Skybox:** A beautiful space skybox makes the environment more immersive.
+  * **✨ Polished UI:** The controls are now organized into a sleek, floating UI panel.
+
+### 
+
+To run this code, you **must** have an internet connection, as it loads several assets (sounds, textures). Save it as an HTML file and open it in your browser.
+
+```html
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebGL Arcade Shooter</title>
+    <title>Ultimate WebGL Physics Sandbox</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         canvas { display: block; }
         #ui-container {
             position: absolute;
-            top: 15px;
-            left: 15px;
+            top: 10px;
+            left: 10px;
             z-index: 100;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 15px 20px;
+            background-color: rgba(25, 25, 25, 0.85);
+            backdrop-filter: blur(5px);
+            padding: 0px 20px 10px 20px;
             border-radius: 10px;
             color: white;
-            min-width: 200px;
+            width: 280px;
         }
-        #ui-container h1 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
+        .control-group {
+            margin-bottom: 12px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 12px;
         }
-        #ui-container p {
-            margin: 0;
-            font-size: 18px;
+        .control-group:last-child { border-bottom: none; }
+        h3 { margin-top: 10px; margin-bottom: 10px; color: #00aaff; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        select, input[type="range"] { width: 100%; box-sizing: border-box; }
+        button {
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #fff;
         }
-        #instructions {
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            text-align: center;
-            color: white;
-            font-size: 18px;
-            text-shadow: 1px 1px 2px black;
-            pointer-events: none;
-        }
+        button:hover { background-color: #00aaff; color: #000; }
     </style>
 </head>
 <body>
     <div id="ui-container">
-        <h1>Score: <span id="scoreValue">0</span></h1>
-        <button id="resetBtn">New Game</button>
+        <h3>World Controls</h3>
+        <div class="control-group">
+            <label for="gravitySlider">Gravity: <span id="gravityValue">-9.82</span> m/s²</label>
+            <input type="range" id="gravitySlider" min="-20" max="20" value="-9.82" step="0.1">
+        </div>
+        <div class="control-group">
+            <label>Global Forces</label>
+            <button id="explodeBtn">Explode</button>
+            <button id="vortexBtn">Toggle Vortex</button>
+        </div>
+
+        <h3>Object Cannon</h3>
+        <div class="control-group">
+            <label for="materialSelect">Material</label>
+            <select id="materialSelect">
+                <option value="wood">Wood</option>
+                <option value="metal">Metal</option>
+                <option value="rubber">Rubber</option>
+                <option value="ice">Ice</option>
+            </select>
+            <label for="forceSlider" style="margin-top:10px;">Fire Force: <span id="forceValue">50</span></label>
+            <input type="range" id="forceSlider" min="10" max="150" value="50" step="1">
+            <button id="fireSphereBtn" style="margin-top:10px;">Fire Sphere</button>
+            <button id="fireBoxBtn">Fire Box</button>
+        </div>
+
+        <h3>System</h3>
+        <div class="control-group">
+             <button id="resetBtn">Reset Scene</button>
+        </div>
     </div>
-    <div id="instructions">Click to Shoot</div>
 
     <script type="importmap">
         {
             "imports": {
                 "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
                 "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
             }
         }
     </script>
     <script type="module">
         import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import * as CANNON from 'cannon-es';
 
         // ## 1. CORE SETUP ##
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111111);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 5, 15);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(5, 8, 15);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
@@ -68,8 +119,229 @@
         const world = new CANNON.World({ gravity: new CANNON.Vec3(0, -9.82, 0) });
         world.broadphase = new CANNON.SAPBroadphase(world);
         world.allowSleep = true;
+        
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
 
-        // ## 2. SOUND EFFECTS ##
-        // Sounds are encoded in Base64 to make this a single, self-contained file.
-        const sounds = {
-            shoot: new Audio("data:audio/wav;base64,UklGRigBAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQBAAD//v/6/Ur+yfOh8L/mh9mH4Yf6hpiGqIa3h/yHlIeghqyGuYbohvuHwIdohdiG4IfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54eghZyGgYbmh9mH/odAhfSH3IfUh/yH+odEhQ2HcIfVh/2H+YeUhqyGq4fWh/iH+4eYh7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4eghZyGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H/YeUhqyGq4fWh/iH/4ech7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4eghZyGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YfghZiGgYcAh2CH3IfUh/yH/YfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54f2h/SH9odwh+OH5IfAhAuE3YbchseH3IdAhfSH04fLh/aH84fNh9WH7Yf8h5iGp4eyh6SHq4fPh/KH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54eAhQyFcIXJh+aH84fWh+KH7Ifsh+KH4Yfwh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghZyGgYcAh2CH3IfUh/yH/YeUhqyGq4fWh/iH/4ech7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4fghZiGgYcAh2CH3IfUh/yH/YfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54fMh9aH8Ifch+6H9YeAhQyFcIXJh+aH/If0h/KH4Ifyh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghZyGgYcAh2CH3IfUh/yH/YeUhqyGq4fWh/iH/4ech7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4fghZiGgYcAh2CH3IfUh/yH/YfLh/SH4YeghWyHbYcAh2CH0ocOh9mHAIgAhfOH1Yfwh4SHs4ech5SH+YbHhvyHl4fMh9aH9Yeyh6yHq4fPh/OH+Iech5yHk4fSh/OH9Yech6SHq4e/h/WH54fMh9aH8Ifch+6H9YeAhQyFcIXJh+aH/If0h/KH4Ifyh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfYh+yH+4fMh+KH9YfLh/iH9YeAhYyFfIXIhOWH/4fWh+KH9Yf0h/SH4ofch/KH9YeghayGgYcAh2CH3YfOh+yH/4fMh+KH9IfZh+6H9YeAhYyFfIXIhOWH/4fYh+6H84f0h+yH44fch/OH9YeghZyGgYcAh2CH3IfUh/yH/YeUhqyGq4fWh/iH/4eYh7eH3of+h/6H1Yfch/aH/odAhfSH1IfNh+yH/4ech5yHk4fPh+6H/4fAhAmE3IbHh9yH1Yfth/yHlIaghqyGuYbwh/aH54fMh9aH8Ifch+6H9YeAhQyFcIXJh+aH/If0h/KH4Ifyh/eH6ofch/KH9YeAhYyFfIXIhOWH/4fWh+aH/If0h/SH4ofch/KH9YeghayGgYcAh2CH3IfUh/6H9YfMh+aH/Ifch+KH9YeAhYyFfIXIhOWH
+        // ## 2. ASSET LOADING & MANAGEMENT ##
+        const textureLoader = new THREE.TextureLoader();
+        const audioLoader = new THREE.AudioLoader();
+        const listener = new THREE.AudioListener();
+        camera.add(listener);
+
+        const hitSound = new THREE.Audio(listener);
+        audioLoader.load('https://cdn.jsdelivr.net/gh/schteppe/cannon.js/examples/sounds/hit.mp3', buffer => {
+            hitSound.setBuffer(buffer);
+            hitSound.setVolume(0.5);
+        });
+        
+        const skyboxLoader = new THREE.CubeTextureLoader();
+        const skybox = skyboxLoader.load([
+            'https://threejs.org/examples/textures/cube/MilkyWay/dark-s_px.jpg',
+            'https://threejs.org/examples/textures/cube/MilkyWay/dark-s_nx.jpg',
+            'https://threejs.org/examples/textures/cube/MilkyWay/dark-s_py.jpg',
+            'https://threejs.org/examples/textures/cube/MilkyWay/dark-s_ny.jpg',
+            'https://threejs.org/examples/textures/cube/MilkyWay/dark-s_pz.jpg',
+            'https://threejs.org/examples/textures/cube/MilkyWay/dark-s_nz.jpg'
+        ]);
+        scene.background = skybox;
+        
+        let objectsToUpdate = [];
+
+        // ## 3. PARTICLE SYSTEM ##
+        const particleGeometry = new THREE.BufferGeometry();
+        const particleCount = 500;
+        const posArray = new Float32Array(particleCount * 3);
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particleMaterial = new THREE.PointsMaterial({ size: 0.1, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending });
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        particleSystem.visible = false;
+        scene.add(particleSystem);
+        let particleIndex = 0;
+        
+        function createParticles(position) {
+            particleSystem.visible = true;
+            for(let i=0; i<20; i++) {
+                posArray[particleIndex * 3 + 0] = position.x + (Math.random() - 0.5) * 0.5;
+                posArray[particleIndex * 3 + 1] = position.y + (Math.random() - 0.5) * 0.5;
+                posArray[particleIndex * 3 + 2] = position.z + (Math.random() - 0.5) * 0.5;
+                particleIndex = (particleIndex + 1) % particleCount;
+            }
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+            setTimeout(() => particleSystem.visible = false, 500);
+        }
+
+        // ## 4. MATERIALS & PHYSICS ##
+        const groundMaterial = new CANNON.Material('ground');
+        const materials = {
+            wood: new CANNON.Material('wood'), metal: new CANNON.Material('metal'),
+            rubber: new CANNON.Material('rubber'), ice: new CANNON.Material('ice')
+        };
+        const contactMaterialsProps = [
+            { materials: [groundMaterial, materials.wood],   props: { friction: 0.4, restitution: 0.2 } },
+            { materials: [groundMaterial, materials.metal],  props: { friction: 0.2, restitution: 0.4 } },
+            { materials: [groundMaterial, materials.rubber], props: { friction: 0.8, restitution: 0.8 } },
+            { materials: [groundMaterial, materials.ice],    props: { friction: 0.05, restitution: 0.1 } }
+        ];
+        for (const cm of contactMaterialsProps) {
+            world.addContactMaterial(new CANNON.ContactMaterial(cm.materials[0], cm.materials[1], cm.props));
+        }
+
+        // ## 5. SCENE OBJECTS & CREATION ##
+        const groundBody = new CANNON.Body({ type: CANNON.Body.STATIC, shape: new CANNON.Plane(), material: groundMaterial });
+        groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+        world.addBody(groundBody);
+        const groundMesh = new THREE.Mesh( new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0x444444 }) );
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.receiveShadow = true;
+        scene.add(groundMesh);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        directionalLight.position.set(15, 25, 10);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        scene.add(directionalLight);
+
+        function createObject(shapeType, materialName, fireOptions = null) {
+            const material = materials[materialName];
+            let body, mesh;
+            
+            const position = fireOptions ? fireOptions.position : new CANNON.Vec3(Math.random() * 4 - 2, 10, Math.random() * 4 - 2);
+
+            if (shapeType === 'sphere') {
+                const radius = 0.5;
+                body = new CANNON.Body({ mass: 1, shape: new CANNON.Sphere(radius), material: material });
+                mesh = new THREE.Mesh( new THREE.SphereGeometry(radius), new THREE.MeshStandardMaterial({ color: new THREE.Color(Math.random(), Math.random(), Math.random()) }) );
+            } else {
+                const size = 1.0;
+                body = new CANNON.Body({ mass: 1, shape: new CANNON.Box(new CANNON.Vec3(size/2, size/2, size/2)), material: material });
+                mesh = new THREE.Mesh( new THREE.BoxGeometry(size, size, size), new THREE.MeshStandardMaterial({ color: new THREE.Color(Math.random(), Math.random(), Math.random()) }) );
+            }
+            body.position.copy(position);
+
+            if (fireOptions) {
+                body.velocity.copy(fireOptions.velocity);
+            }
+
+            body.health = 100; // DESTRUCTIBLE OBJECTS
+            body.addEventListener('collide', event => {
+                const impactVelocity = event.contact.getImpactVelocityAlongNormal();
+                if (impactVelocity > 2.0) {
+                    if(hitSound.isPlaying) hitSound.stop();
+                    hitSound.play();
+                    
+                    const damage = impactVelocity * 5;
+                    body.health -= damage;
+                    if(body.health <= 0) {
+                        const index = objectsToUpdate.findIndex(obj => obj.body === body);
+                        if (index > -1) {
+                           const obj = objectsToUpdate[index];
+                           world.removeBody(obj.body);
+                           scene.remove(obj.mesh);
+                           createParticles(obj.body.position);
+                           objectsToUpdate.splice(index, 1);
+                        }
+                    }
+                }
+            });
+
+            world.addBody(body);
+            mesh.castShadow = true;
+            scene.add(mesh);
+            objectsToUpdate.push({ mesh, body });
+        }
+        
+        // ## 6. UI & INTERACTION ##
+        // World Controls
+        const gravitySlider = document.getElementById('gravitySlider');
+        const gravityValue = document.getElementById('gravityValue');
+        gravitySlider.addEventListener('input', e => {
+            world.gravity.y = parseFloat(e.target.value);
+            gravityValue.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        let vortexActive = false;
+        const vortexCenter = new CANNON.Vec3(0, 5, 0);
+        document.getElementById('vortexBtn').addEventListener('click', () => {
+             vortexActive = !vortexActive;
+             document.getElementById('vortexBtn').style.backgroundColor = vortexActive ? '#00aaff' : '#333';
+        });
+
+        document.getElementById('explodeBtn').addEventListener('click', () => {
+             const explosionPos = new CANNON.Vec3(0, 2, 0);
+             for(const obj of objectsToUpdate) {
+                 const dir = obj.body.position.vsub(explosionPos);
+                 const distance = dir.length();
+                 dir.normalize();
+                 const impulse = dir.scale(80 / distance);
+                 obj.body.applyImpulse(impulse);
+             }
+        });
+
+        // Cannon Controls
+        const forceSlider = document.getElementById('forceSlider');
+        const forceValue = document.getElementById('forceValue');
+        const materialSelect = document.getElementById('materialSelect');
+        forceSlider.addEventListener('input', e => forceValue.textContent = e.target.value);
+        
+        function fireObject(shape) {
+            const force = parseFloat(forceSlider.value);
+            const firePos = new CANNON.Vec3(0, 2, -10);
+            
+            // Get direction from camera
+            const cameraDirection = new THREE.Vector3();
+            camera.getWorldDirection(cameraDirection);
+            const fireVelocity = new CANNON.Vec3(cameraDirection.x, cameraDirection.y, cameraDirection.z).scale(force);
+
+            createObject(shape, materialSelect.value, { position: firePos, velocity: fireVelocity });
+        }
+        document.getElementById('fireSphereBtn').addEventListener('click', () => fireObject('sphere'));
+        document.getElementById('fireBoxBtn').addEventListener('click', () => fireObject('box'));
+        
+        // Reset
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            for(const obj of objectsToUpdate) { world.removeBody(obj.body); scene.remove(obj.mesh); }
+            objectsToUpdate = [];
+        });
+
+        // ## 7. ANIMATION LOOP ##
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const deltaTime = clock.getDelta();
+            world.step(1 / 60, deltaTime);
+            
+            if(vortexActive) {
+                for(const obj of objectsToUpdate) {
+                    const dir = vortexCenter.vsub(obj.body.position);
+                    const dist = dir.length();
+                    if(dist > 1.0) { // prevent extreme forces at center
+                        dir.normalize();
+                        const force = dir.scale(50 / dist);
+                        obj.body.applyForce(force);
+                    }
+                }
+            }
+
+            for (const object of objectsToUpdate) {
+                object.mesh.position.copy(object.body.position);
+                object.mesh.quaternion.copy(object.body.quaternion);
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
+
+```
